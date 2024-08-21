@@ -12,8 +12,11 @@ def differentiate(u, dt):
 def differentiate_vector(u, dt):
     u_p = u[2:]
     u_m = u[:-2]
+    
     duv = np.zeros_like(u)
+    
     duv[1:-1] = 1/2/dt*(u_p-u_m)
+    
     duv[0] = (u[1]-u[0])/dt
     duv[-1] = (u[-1]-u[-2])/dt
     return duv

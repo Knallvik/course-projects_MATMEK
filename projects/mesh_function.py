@@ -12,8 +12,7 @@ def func(t):
         return np.exp(-t)
     elif t>3 and t<=4:
         return np.exp(-3*t)
-    else: print('outside of range')
-
+        
 def test_mesh_function():
     t = np.array([1, 2, 3, 4])
     f = np.array([np.exp(-1), np.exp(-2), np.exp(-3), np.exp(-12)])
