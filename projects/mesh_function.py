@@ -12,6 +12,8 @@ def func(t):
         return np.exp(-t)
     elif t>3 and t<=4:
         return np.exp(-3*t)
+    else:
+        raise ValueError('invalid value')
         
 def test_mesh_function():
     t = np.array([1, 2, 3, 4])
