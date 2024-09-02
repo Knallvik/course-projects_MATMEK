@@ -10,6 +10,7 @@ We use various boundary conditions.
 import numpy as np
 import matplotlib.pyplot as plt
 import sympy as sp
+import scipy as sc
 
 t = sp.Symbol('t')
 
@@ -141,7 +142,19 @@ class VibFD2(VibSolver):
         assert T.is_integer() and T % 2 == 0
 
     def __call__(self):
+        h = self.T/self.Nt
+        main_diag = -2 + self.w**2 * h**2
         u = np.zeros(self.Nt+1)
+        u[0]=self.I
+        u[-1]=self.I
+        A = sc.sparse.diags([1,main_diag,1], [-1,0,1], shape=[self.Nt+1,self.Nt+1], format='lil')
+        A[0,0] = 1
+        A[0,1] = 0
+        A[-1,-1] = 1
+        A[-1,-2] = 0
+        A = sc.sparse.csr_matrix(A)
+        Solver = sc.sparse.linalg.inv(A)
+        u = Solver@u
         return u
 
 class VibFD3(VibSolver):
@@ -161,7 +174,20 @@ class VibFD3(VibSolver):
         assert T.is_integer() and T % 2 == 0
 
     def __call__(self):
+        h = self.T/self.Nt
+        main_diag = -2 + self.w**2 * h**2
         u = np.zeros(self.Nt+1)
+        u[0]=self.I
+        u[-1]=0
+        A = sc.sparse.diags([1,main_diag,1], [-1,0,1], shape=[self.Nt+1,self.Nt+1], format='lil')
+        A[0,0] = 1
+        A[0,1] = 0
+        A[-1,-1] = 3
+        A[-1,-2] = -4
+        A[-1,-3] = 1
+        A = sc.sparse.csr_matrix(A)
+        Solver = sc.sparse.linalg.inv(A)
+        u = Solver@u
         return u
 
 class VibFD4(VibFD2):
@@ -175,7 +201,21 @@ class VibFD4(VibFD2):
     order = 4
 
     def __call__(self):
+        h = self.T/self.Nt
+        main_diag = 12*self.w**2 * h**2 - 30
         u = np.zeros(self.Nt+1)
+        u[0]=self.I
+        u[-1]=self.I
+        A = sc.sparse.diags([-1,16,main_diag,16,-1], [-2, -1, 0, 1, 2], shape=[self.Nt+1,self.Nt+1], format='lil')
+        A[0,0] = 1
+        A[0,1:3] = 0
+        A[1,:6] = 10, 12*self.w**2 * h**2 - 15, -4, 14, -6, 1
+        A[-1,-1] = 1
+        A[-1,-3:-1] = 0
+        A[-2,-6:] = 1, -6, 14, -4, 12*self.w**2 * h**2 -15, 10
+        A = sc.sparse.csr_matrix(A)
+        Solver = sc.sparse.linalg.inv(A)
+        u = Solver@u
         return u
 
 def test_order():
