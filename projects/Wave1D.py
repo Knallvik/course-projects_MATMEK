@@ -46,11 +46,37 @@ class Wave1D:
         The returned matrix is not divided by dx**2
         """
         D = sparse.diags([1, -2, 1], [-1, 0, 1], (self.N+1, self.N+1), 'lil')
-        if bc == 1: # Neumann condition is baked into stencil
-            raise NotImplementedError
+        if type(bc) == int:
+            if bc == 0:
+                D[0,:2] = 0
+                D[-1,-2:] = 0
+            elif bc == 1: # Neumann condition is baked into stencil
+                D[0,1] = 2
+                D[-1,-2] = 2
+            elif bc == 3: # periodic (Note u[0] = u[-1])
+                D[0,-2] = 1
+                
+        elif type(bc) == dict:
+            match bc['left']:
+                case 0:
+                    D[0,:2] = 0
+                case 1:
+                    D[0,1] = 2
+                case 2:
+                    pass
+                case 3:
+                    D[0,-2] = 1
+                    
+            match bc['right']:
+                case 0:
+                    D[-1,-2:] = 0
+                case 1:
+                    D[-1,-2] = 2
+                case 2:
+                    pass
+                case 3:
+                    pass
 
-        elif bc == 3: # periodic (Note u[0] = u[-1])
-            raise NotImplementedError
 
         return D
 
@@ -71,27 +97,52 @@ class Wave1D:
 
         """
         u = u if u is not None else self.unp1
-        if bc == 0: # Dirichlet condition
-            u[0] = 0
-            u[-1] = 0
-
-        elif bc == 1: # Neumann condition
-            pass
-
-        elif bc == 2: # Open boundary
-            raise NotImplementedError
-
-        elif bc == 3:
-            raise NotImplementedError
-
-        else:
-            raise RuntimeError(f"Wrong bc = {bc}")
+        if type(bc) == int:
+            if bc == 0: # Dirichlet condition
+                pass
+    
+            elif bc == 1: # Neumann condition
+                pass
+    
+            elif bc == 2: # Open boundary
+                u[0] = 2*(1-self.cfl)*self.un[0] - (1-self.cfl)/(1+self.cfl)*self.unm1[0] \
+                        + 2*self.cfl**2/(1+self.cfl)*self.un[1]
+                u[-1] = 2*(1-self.cfl)*self.un[-1] - (1-self.cfl)/(1+self.cfl)*self.unm1[-1] \
+                        + 2*self.cfl**2/(1+self.cfl)*self.un[-2]
+    
+            elif bc == 3: #Periodic boundary
+                u[-1] = u[0]
+    
+            else:
+                raise RuntimeError(f"Wrong bc = {bc}")
+        elif type(bc) == dict:
+            match bc['left']:
+                case 0:
+                    pass
+                case 1:
+                    pass
+                case 2:
+                    u[0] = 2*(1-self.cfl)*self.un[0] - (1-self.cfl)/(1+self.cfl)*self.unm1[0] \
+                        + 2*self.cfl**2/(1+self.cfl)*self.un[1]
+                case 3:
+                    pass
+                    
+            match bc['right']:
+                case 0:
+                    pass
+                case 1:
+                    pass
+                case 2:
+                    u[-1] = 2*(1-self.cfl)*self.un[-1] - (1-self.cfl)/(1+self.cfl)*self.unm1[-1] \
+                        + 2*self.cfl**2/(1+self.cfl)*self.un[-2]
+                case 3:
+                    u[-1] = u[0]
 
     @property
     def dt(self):
         return self.cfl*self.dx/self.c
 
-    def __call__(self, Nt, cfl=None, bc=0, ic=0, save_step=100):
+    def __call__(self, Nt, cfl=None, bc=0, ic=0, save_step=50):
         """Solve wave equation
 
         Parameters
@@ -173,13 +224,13 @@ class Wave1D:
             line.set_ydata(data[frame*save_step])
             return (line,)
         ani = animation.FuncAnimation(fig=fig, func=update, frames=len(data), blit=True)
-        ani.save('wavemovie.apng', writer='pillow', fps=5) # This animated png opens in a browser
+        ani.save('wavemovie.gif', writer='pillow', fps=5) # This animated png opens in a browser
         ani.to_jshtml()
         plt.show()
 
 def test_pulse_bcs():
     sol = Wave1D(100, cfl=1, L0=2, c0=1)
-    data = sol(100, bc=0, ic=0, save_step=100)
+    data = sol(100, bc={'left': 0, 'right': 0}, ic=0, save_step=100)
     assert np.linalg.norm(data[0]+data[100]) < 1e-12
     data = sol(100, bc=0, ic=1, save_step=100)
     assert np.linalg.norm(data[0]+data[100]) < 1e-12
