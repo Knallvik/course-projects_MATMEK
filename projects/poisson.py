@@ -72,7 +72,7 @@ class Poisson:
         self.x, self.dx = np.linspace(0, self.L, N+1, retstep=True)
         return self.x
 
-    def __call__(self, N, bc=(0, 0), f=implemented_function('f', lambda x: 2)(x)):
+    def __call__(self, bc=(0, 0), f=implemented_function('f', lambda x: 2)(x)):
         """Solve Poisson's equation
 
         Parameters
@@ -89,7 +89,7 @@ class Poisson:
         The solution as a Numpy array
 
         """
-        self.create_mesh(N)
+        self.create_mesh(self.N)
         A, b = self.assemble(bc=bc, f=f)
         return sparse.linalg.spsolve(A, b)
 
@@ -111,8 +111,8 @@ class Poisson:
         return np.sqrt(self.dx*np.sum((uj-u)**2))
 
 def test_poisson():
-    solver = Poisson(L=1)
-    u = solver(N=1000, bc=(0,1))
+    solver = Poisson(L=1, N=1000)
+    u = solver(bc=(0,1))
     ue = x**2
     assert solver.l2_error(u,ue)<1e-12
 
