@@ -16,7 +16,6 @@ class Poisson:
     """
     def __init__(self, L=1, N=None):
         self.L = L
-        self.N = N
         self.ue = None
         if isinstance(N, int):
             self.create_mesh(N)
@@ -69,7 +68,8 @@ class Poisson:
         x : array
             The mesh
         """
-        self.x, self.dx = np.linspace(0, self.L, self.N+1, retstep=True)
+        self.N = N
+        self.x, self.dx = np.linspace(0, self.L, N+1, retstep=True)
         return self.x
 
     def __call__(self, N, bc=(0, 0), f=implemented_function('f', lambda x: 2)(x)):
