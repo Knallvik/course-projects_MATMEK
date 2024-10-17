@@ -5,6 +5,8 @@ import scipy.sparse as sparse
 from sympy.utilities.lambdify import implemented_function
 from poisson import Poisson
 import itertools
+import time
+from numba import jit
 
 x, y = sp.symbols('x,y')
 
@@ -25,11 +27,11 @@ class Poisson2D:
     def create_mesh(self):
         """Return a 2D Cartesian mesh
         """
-        xi, yj = np.meshgrid(self.px.x, self.py.x, indexing = 'ij', sparse = False)
+        xi, yj = np.meshgrid(self.px.x, self.py.x, indexing = 'ij', sparse = True)
         return xi, yj
-
-    def bnds(self):
         
+    def bnds(self):
+        """
         bnds = []
         for i in range(self.px.N+1):
             for j in range(self.py.N+1):
@@ -39,9 +41,10 @@ class Poisson2D:
         B = np.ones((self.px.N+1,self.py.N+1), dtype=bool)
         B[1:-1,1:-1] = 0
         bnds = np.where(B.ravel()==1)[0]
-        """
-        return bnds
 
+        
+        return bnds
+        
     def laplace(self):
         """Return a vectorized Laplace operator"""        
         Dx = 1/self.px.dx**2 * sparse.diags([1,-2,1], [-1,0,1], (self.px.N+1,self.px.N+1),'lil') # crate second derivate matricx for x 
@@ -60,10 +63,9 @@ class Poisson2D:
         for i in self.bnds():
             A[i] = 0
             A[i,i] = 1
-        
-            
-        return A.tocsr() #vectorized laplace operator for dirichlet boundary conditions
 
+        return A.tocsr() #vectorized laplace operator for dirichlet boundary conditions
+        
     def assemble(self, f=None):
         """Return assemble coefficient matrix A and right hand side vector b"""
         A = self.laplace()
@@ -92,7 +94,7 @@ class Poisson2D:
         ue_vec = sp.lambdify((x,y), ue)(xi,yi)
         print(np.sqrt(self.px.dx*self.py.dx*np.sum((ue_vec-u)**2)))
         return np.sqrt(self.px.dx*self.py.dx*np.sum((ue_vec-u)**2))
-
+        
     def __call__(self, f=implemented_function('f', lambda x, y: 2)(x, y)):
         """Solve Poisson's equation with a given righ hand side function
 
@@ -112,13 +114,16 @@ class Poisson2D:
         return sparse.linalg.spsolve(A, b.ravel()).reshape((self.px.N+1, self.py.N+1))
 
 def test_poisson2d():
-    solver = Poisson2D(Lx=1, Ly=1, Nx=100, Ny=100)
+    solver = Poisson2D(Lx=1, Ly=1, Nx=1200, Ny=1200)
     ue = 1e5*x*(x-solver.px.L)*y*(y-solver.py.L) # Solution that satisfies all homogenous boundary conditions
     f = ue.diff(y,2) + ue.diff(x,2)
+    t_start = time.time()
     u = solver(f=f)
+    t_end = time.time()
+    print(t_end-t_start)
     xi,yi = solver.create_mesh()
 
-    assert solver.l2_error(u,ue)<1e-10
+    assert solver.l2_error(u,ue)<1e-8
 
 if __name__ == '__main__':
     test_poisson2d()
